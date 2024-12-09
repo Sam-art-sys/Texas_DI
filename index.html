@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" href="pin.png">
+    <title>Final Map</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+       crossorigin=""/>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+       crossorigin=""></script>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.js"></script>
+
+    <!-- Load texas.js -->
+    <script type="text/javascript" src="data.js"></script>
+
+    <style type="text/css">
+        html, body { margin: 0; padding: 0; height: 100%; }
+        #map { min-height: 100%; }
+        
+        /* Legend and North Arrow Styling */
+        .legend {
+            padding: 6px 8px;
+            line-height: 18px;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+        .north-arrow {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 5px;
+        }
+        #map-heading {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: white;
+            border: 2px solid black;
+            padding: 10px;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+            font-size: 22px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Map Title -->
+    <h1 id="map-heading">Diversity Index </h1>
+
+    <!-- Map Div -->
+    <div id="map" style="height: 600px"></div>
+
+    <!-- North Arrow Image -->
+    <div class="north-arrow">
+        <img src="north.png" alt="North Arrow" style="width: 100px;">
+    </div>
+
+    <script type="text/javascript">
+        // Initialize the map
+        var map = L.map('map', {
+            center: [31.20, -99.72],
+            zoom: 5
+        });
+
+        // Add basemap tile layer
+        L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+            attribution: 'Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL.',
+            maxZoom: 8,
+            minZoom: 4
+        }).addTo(map);
+
+        // Function to style choropleth based on population density
+        function getColor(value) {
+            return value > 0.593 ? '#006d2c' :
+                   value > 0.51 ? '#31a354' :
+                   value > 0.416 ? '#74c476' :
+                   value > 0.286 ? '#bae4b3' :
+                                  '#edf8e9';
+        }
+
+        function style(feature) {
+            return {
+                fillColor: getColor(feature.properties.DiversityIndex),
+                weight: 2,
+                opacity: 1,
+                color: 'gray',
+                fillOpacity: 0.9
+            };
+        }
+
+        // Modify the `onEachFeature` function to create a styled popup with a unified white background
+        function onEachFeature(feature, layer) {
+            layer.on({
+                mouseover: function(e) {
+                    var layer = e.target;
+                    layer.setStyle({
+                        weight: 5,
+                        color: '#666',
+                        dashArray: '6', 
+                        fillOpacity: 0.7
+                    });
+                    if (!L.Browser.ie && !L.Browser.opera) {
+                        layer.bringToFront();
+                    }
+
+                    var popupContent = `
+                            <div style="font-weight: bold; margin-bottom: 5px;">${feature.properties.CNTY_NM}</div>
+                                            </div>`;
+                    layer.bindPopup(popupContent, { maxWidth: 200 }).openPopup();
+                },
+                mouseout: function(e) {
+                    geojson.resetStyle(e.target);
+                    map.closePopup();
+                }
+            });
+        }
+
+        // Load GeoJSON data and apply styles
+        var geojson = L.geoJson(data, {
+            style: style,
+            onEachFeature: onEachFeature
+        }).addTo(map);
+
+        // Add legend
+        var legend = L.control({position: 'bottomright'});
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'legend'),
+                grades = [0, 0.286, 0.416, 0.51, 0.593]; // Your grade thresholds
+            div.innerHTML = '<b>Diversity Index <br><br></b>';
+            for (var i = 0; i < grades.length; i++) {
+                div.innerHTML +=
+                    '<i style="background:' + getColor(grades[i]) + '"></i> ' + // Use grades[i] directly
+                    grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+            }
+            return div;
+        };
+        legend.addTo(map);
+    </script>
+</body>
+</html>
